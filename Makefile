@@ -147,68 +147,6 @@ analysis-gamgamZZ-HepMC.exe: analysis-gamgamZZ-HepMC.o
                 $(FASTJETLIBS) \
 	        $(LINK_LIBS) -o $@
 
-example_BuildEventFromScratch.exe: example_BuildEventFromScratch.o
-	@echo "Building $@ ..."
-	$(CXX) $(FLAGS) example_BuildEventFromScratch.o \
-		$(HepMClib) \
-		$(CLHEP_LIB) \
-	        $(LINK_LIBS) -o $@
-
-example_EventSelection.exe: example_EventSelection.o
-	@echo "Building $@ ..."
-	$(CXX) $(FLAGS) example_EventSelection.o \
-		$(HepMClib) \
-	        $(LINK_LIBS) -o $@
-
-example_MyHerwig.exe: example_MyHerwig.o
-	@echo "Building $@ ..."
-	$(CXX) $(FLAGS) example_MyHerwig.o \
-		$(HepMClib) $(HepMCfiolib) \
-	        $(Herwig_LIB) $(LINK_LIBS) -o $@
-
-example_MyPythia.exe: $(initpydata_OBJ) $(pythia_OBJ) example_MyPythia.o
-	@echo "Building $@ ..."
-	$(CXX) $(FLAGS) $(pythia_OBJ) example_MyPythia.o \
-		$(HepMClib) $(HepMCfiolib) \
-	        $(Pythia_LIB) $(LINK_LIBS) -o $@
-
-example_MyPythiaOnlyToHepMC.exe: $(initpydata_OBJ) $(pythia_OBJ) example_MyPythiaOnlyToHepMC.o
-	@echo "Building $@ ..."
-	$(CXX) $(FLAGS) $(pythia_OBJ) example_MyPythiaOnlyToHepMC.o \
-		$(HepMClib) $(HepMCfiolib) \
-	        $(Pythia_LIB) $(LINK_LIBS) -o $@
-
-example_PythiaStreamIO.exe: $(initpydata_OBJ) $(pythia_OBJ) example_PythiaStreamIO.o
-	@echo "Building $@ ..."
-	$(CXX) $(FLAGS) $(pythia_OBJ) example_PythiaStreamIO.o \
-		$(HepMClib) $(HepMCfiolib) \
-	        $(Pythia_LIB) $(LINK_LIBS) -o $@
-
-example_UsingIterators.exe: example_UsingIterators.o
-	@echo "Building $@ ..."
-	$(CXX) $(FLAGS) example_UsingIterators.o \
-		$(HepMClib) \
-	        $(LINK_LIBS) -o $@
-
-example_UsingIterators_teste.exe: example_UsingIterators_teste.o
-	@echo "Building $@ ..."
-	$(CXX) $(FLAGS) example_UsingIterators_teste.o \
-		$(HepMClib) \
-                $(ROOTLIBS) \
-	        $(LINK_LIBS) -o $@
-
-testPythiaCopies.exe: $(initpydata_OBJ) $(pythia_OBJ) testPythiaCopies.o
-	@echo "Building $@ ..."
-	$(CXX) $(FLAGS) $(pythia_OBJ) testPythiaCopies.o \
-		$(HepMClib) $(HepMCfiolib) \
-	        $(Pythia_LIB) $(LINK_LIBS) -o $@
-
-testHerwigCopies.exe: testHerwigCopies.o
-	@echo "Building $@ ..."
-	$(CXX) $(FLAGS) testHerwigCopies.o \
-		$(HepMClib) $(HepMCfiolib) \
-	        $(Herwig_LIB) $(LINK_LIBS) -o $@
-
 ###############################################################################
 # instructions for building a .o file from a .cxx file
 #

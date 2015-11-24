@@ -15,9 +15,11 @@
 #include "TSystem.h"
 #include "TDataType.h"
 #include "TFile.h"
-#include "TLorentzVector.h"
 #include "TTree.h"
 #include "TH1F.h"
+#include "TH2D.h"
+#include "TLorentzVector.h"
+#include "TRandom3.h"
 
 #include <math.h>
 #include <algorithm>
@@ -112,11 +114,16 @@ public:
 
 int main() { 
 
-   bool debug = false;
+   bool debug = true;
    int maxEvents = -1;
+   double EBeam_ = 6500.;
 
+   //std::string const outputFileName = "AAZZ_13TeV-A0Z_5E-6_Lambda_2TeV.root";
+   std::string const outputFileName = "ZZTo4L_Tune4C_13TeV-powheg-pythia8.root";
+ 
    //HepMC::IO_GenEvent ascii_in("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV.hepmc",std::ios::in);
-   HepMC::IO_GenEvent ascii_in("/afs/cern.ch/work/a/antoniov/public/data1/MC/FPMC/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2.hepmc",std::ios::in);
+   //HepMC::IO_GenEvent ascii_in("/afs/cern.ch/work/a/antoniov/public/data1/MC/FPMC/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2.hepmc",std::ios::in);
+   HepMC::IO_GenEvent ascii_in("/afs/cern.ch/work/a/antoniov/public/data1/MC/ZZTo4L_Tune4C_13TeV-powheg-pythia8_GEN-SIM_00033D48-8FFD-E311-8B7B-0025904C6226.hepmc",std::ios::in);
 
    // declare another IO_GenEvent for writing out the good events
    //HepMC::IO_GenEvent ascii_out("out.dat",std::ios::out);
@@ -164,6 +171,19 @@ int main() {
    std::vector<fastjet::PseudoJet> fjInputs;
    //==================================================================
 
+   //================================================================
+   // Access acceptance table
+   //==================================================================
+   TFile* input_file_acceptance = TFile::Open("xi_vs_t_PPS_acceptance.root","READ");
+   TH2D* h_xi_vs_t_PPS_acceptance_tmp;
+   input_file_acceptance->GetObject("hxi_vs_t_PPS_gen_beforeSel_ArmF_acceptance_rebin",h_xi_vs_t_PPS_acceptance_tmp);
+   auto h_xi_vs_t_PPS_acceptance = *h_xi_vs_t_PPS_acceptance_tmp;
+   input_file_acceptance->Close();  
+   //==================================================================
+
+   int seed = 12345;
+   TRandom3 random( seed );  
+
    // Declare ROOT TTree
    int const NMUMAX = 50;
    int n_mu = 0;
@@ -209,6 +229,10 @@ int main() {
    double proton_py[PROTONMAX];
    double proton_pz[PROTONMAX];
    double proton_energy[PROTONMAX];
+   double proton_xi[PROTONMAX];
+   double proton_t[PROTONMAX];
+   double proton_weight[PROTONMAX];
+   int    proton_acc[PROTONMAX];
 
    int const JETMAX = 500;
    int n_jet =0;
@@ -291,6 +315,10 @@ int main() {
    T->Branch("proton_pz", &proton_pz,"proton_pz[n_proton]/D");
    T->Branch("proton_pt", &proton_pt,"proton_pt[n_proton]/D");
    T->Branch("proton_energy", &proton_energy,"proton_energy[n_proton]/D");
+   T->Branch("proton_xi", &proton_xi,"proton_xi[n_proton]/D");
+   T->Branch("proton_t", &proton_t,"proton_t[n_proton]/D");
+   T->Branch("proton_weight", &proton_weight,"proton_weight[n_proton]/D");
+   T->Branch("proton_acc", &proton_acc,"proton_acc[n_proton]/I");
 
    //Jet
    T->Branch("n_jet", &n_jet,"n_jet/I");
@@ -372,6 +400,10 @@ int main() {
    TH1F* h_proton_py = new TH1F("proton_py","proton_py",100,0.,1000.);
    TH1F* h_proton_pz = new TH1F("proton_pz","proton_pz",100,0.,1000.);
    TH1F* h_proton_energy = new TH1F("proton_energy","proton_energy",1000,0.,1000.);
+   TH1F* h_proton_xi = new TH1F("proton_xi","proton_xi",100,0.,1.);
+   TH1F* h_proton_t = new TH1F("proton_t","proton_t",100,0.,4.);
+   TH1F* h_proton_weight = new TH1F("proton_weight","proton_weight",100,0.,1.);
+   TH1F* h_proton_acc = new TH1F("proton_acc","proton_acc",2,0,2);
 
    //Jets
    TH1F* h_jetpt = new TH1F("jetpt","jetpt",400,0.,400.);
@@ -382,6 +414,7 @@ int main() {
    IsZ_Boson isZ;
 
    int icount=0;
+   int num_events_all=0;
    int num_good_events=0;
 
    HepMC::GenEvent* evt = ascii_in.read_next_event();
@@ -393,6 +426,8 @@ int main() {
 
       if ( icount ) std::cout << "Processing Event Number " << icount
 	                      << " its # " << evt->event_number() << std::endl;
+
+      ++num_events_all;
 
       // Reset Tree variables per event
       n_mu = 0;
@@ -438,7 +473,11 @@ int main() {
 	 proton_px[iproton] = -999.;
 	 proton_py[iproton] = -999.;
 	 proton_pz[iproton] = -999.;
-	 proton_energy[iproton] = -999.; }
+	 proton_energy[iproton] = -999.; 
+	 proton_xi[iproton] = -999.;
+	 proton_t[iproton] = -999.;
+	 proton_weight[iproton] = -999.;
+	 proton_acc[iproton] = -1; }
 
       n_jet=0;
       for(int ijet = 0; ijet < JETMAX; ++ijet) {
@@ -492,8 +531,8 @@ int main() {
 
       for( HepMC::GenEvent::particle_const_iterator p = evt->particles_begin() ; p != evt->particles_end() ; ++p ){
 	 // mu+/-
-	 // pT >= 5 GeV 
-	 if ( isfinal(*p) && abs( (*p)->pdg_id() ) == 13 && (*p)->momentum().perp() >= 5.0 ) {
+	 // pT >= 5 GeV ; |eta| < 2.4
+	 if ( isfinal(*p) && abs( (*p)->pdg_id() ) == 13 && (*p)->momentum().perp() >= 5.0 && fabs( (*p)->momentum().eta() ) <= 2.4 ) {
 	    int pdg_id = (*p)->pdg_id();
 	    // Could potentially be slow.
 	    // Instead build map with charge per PDG id before event loop.
@@ -523,8 +562,8 @@ int main() {
 	 }
 
 	 // e+/-
-	 // pT >= 5 GeV 
-	 if ( isfinal(*p) && abs( (*p)->pdg_id() ) == 11 && (*p)->momentum().perp() >= 5.0 ) {
+	 // pT >= 5 GeV ; |eta| < 2.5
+	 if ( isfinal(*p) && abs( (*p)->pdg_id() ) == 11 && (*p)->momentum().perp() >= 5.0 && fabs( (*p)->momentum().eta() ) <= 2.5 ) {
 	    int pdg_id = (*p)->pdg_id();
 	    // Could potentially be slow.
 	    // Instead build map with charge per PDG id before event loop.
@@ -553,18 +592,44 @@ int main() {
 	    ++n_e;
 	 }
 
-	 if ( abs((*p)->pdg_id() == 2212) && (*p)->status() == 1 ){
+	 if ( abs((*p)->pdg_id() == 2212) && (*p)->status() == 1 && fabs( (*p)->momentum().pz() ) >= 0.50*EBeam_ ){
 	    proton_px[n_proton] = (*p)->momentum().px();
 	    proton_py[n_proton] = (*p)->momentum().py();
 	    proton_pz[n_proton] = (*p)->momentum().pz();
 	    proton_pt[n_proton] = (*p)->momentum().perp();
 	    proton_energy[n_proton] =(*p)->momentum().e();
+ 
+	    h_proton_px->Fill( proton_px[n_proton] );
+	    h_proton_py->Fill( proton_py[n_proton] );
+	    h_proton_pz->Fill( proton_pz[n_proton] );
+	    h_proton_pt->Fill( proton_pt[n_proton] );
+	    h_proton_energy->Fill( proton_energy[n_proton] );
 
-	    h_proton_px->Fill( proton_px[n_proton]);
-	    h_proton_py->Fill( proton_py[n_proton]);
-	    h_proton_pz->Fill(proton_pz[n_proton]);
-	    h_proton_pt->Fill( proton_pt[n_proton]);
-	    h_proton_energy->Fill(proton_energy[n_proton]);
+            // Simulate whether proton is accepted
+            double proton_xi_tmp = 1. - fabs( proton_pz[n_proton] )/EBeam_;
+            TLorentzVector vec_proton(proton_px[n_proton],proton_py[n_proton],proton_pz[n_proton],proton_energy[n_proton]);
+            TLorentzVector vec_beam_1(0.,0.,EBeam_,EBeam_);              
+            TLorentzVector vec_beam_2(0.,0.,-EBeam_,EBeam_);              
+            if( proton_pz[n_proton] < 0) vec_proton -= vec_beam_2;
+            else                         vec_proton -= vec_beam_1;   
+            double proton_t_tmp = vec_proton.Mag2();  
+             
+            double proton_weight_tmp = h_xi_vs_t_PPS_acceptance.GetBinContent( h_xi_vs_t_PPS_acceptance.GetXaxis()->FindBin( proton_xi_tmp ),h_xi_vs_t_PPS_acceptance.GetYaxis()->FindBin( fabs(proton_t_tmp) ) );
+            int proton_acc_tmp = 0;
+            if( random.Rndm() < proton_weight_tmp ) proton_acc_tmp = 1; 
+ 
+            proton_xi[n_proton]     = proton_xi_tmp;
+            proton_t[n_proton]      = proton_t_tmp;
+            proton_weight[n_proton] = proton_weight_tmp;
+            proton_acc[n_proton]    = proton_acc_tmp;
+              
+	    h_proton_xi->Fill( proton_xi[n_proton] );
+	    h_proton_t->Fill( fabs( proton_t[n_proton] ) );
+	    h_proton_weight->Fill( proton_weight[n_proton] );
+	    h_proton_acc->Fill( proton_acc[n_proton] );
+
+	    if( debug ) { std::cout << "Found proton xi,t,weight,accepted= " << proton_xi[n_proton] << " , " << proton_t[n_proton] << " , " << proton_weight[n_proton] << " , " << proton_acc[n_proton] << std::endl; std::cout << "\t"; (*p)->print(); }
+
 	    ++n_proton;
 	 }
 
@@ -631,7 +696,14 @@ int main() {
                                                          parent != (*p)->production_vertex()->particles_end(HepMC::parents); ++parent ) {
                   if( isZ(*parent) ) { findParentZ = true; break; }
 	       }
-	       if( findParentZ ){
+               bool findChildZ = false; 
+	       for ( HepMC::GenVertex::particle_iterator child = (*p)->end_vertex()->particles_begin(HepMC::children);
+                                                         child != (*p)->end_vertex()->particles_end(HepMC::children); ++child ) {
+                  if( isZ(*child) ) { findChildZ = true; break; }
+	       }
+
+               bool findLastZInChain = findParentZ && !findChildZ;
+	       if( findLastZInChain ){
 		  HepMC::GenVertex::particle_iterator it_part = (*p)->end_vertex()->particles_begin(HepMC::children);
 		  HepMC::GenParticle* decay_part_1 = *it_part;
 		  ++it_part;
@@ -720,11 +792,11 @@ int main() {
       evt = ascii_in.read_next_event();   
    }
    //........................................PRINT RESULT
-   std::cout << num_good_events << " out of " << icount 
-             << " processed events passed the cuts. Finished." << std::endl;
+   std::cout << num_good_events << " out of " << num_events_all << " processed events passed the cuts. Finished." << std::endl;
+
    T->Print();
    // Output file
-   TFile* output = new TFile("AAZZ_13TeV.root","RECREATE");
+   TFile* output = new TFile( outputFileName.c_str() ,"RECREATE");
    output->cd();
    // Write TTree and histograms to file
    T->Write();
@@ -768,6 +840,10 @@ int main() {
    h_proton_pz->Write();
    h_proton_pt->Write();
    h_proton_energy->Write();
+   h_proton_xi->Write();
+   h_proton_t->Write();
+   h_proton_weight->Write();
+   h_proton_acc->Write();
 
    h_jetpt->Write();
 
