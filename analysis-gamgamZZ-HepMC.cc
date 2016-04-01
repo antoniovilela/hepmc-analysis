@@ -118,15 +118,15 @@ int main() {
    int maxEvents = -1;
    double EBeam_ = 6500.;
 
-   //std::string const outputFileName = "AAZZ_13TeV-A0Z_5E-6_Lambda_2TeV.root";
-   std::string const outputFileName = "ZZTo4L_Tune4C_13TeV-powheg-pythia8.root";
+   std::string const outputFileName = "AAZZ_13TeV-A0Z_5E-6_Lambda_2TeV.root";
+   //std::string const outputFileName = "ZZTo4L_Tune4C_13TeV-powheg-pythia8.root";
  
    //HepMC::IO_GenEvent ascii_in("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV.hepmc",std::ios::in);
-   //HepMC::IO_GenEvent ascii_in("/afs/cern.ch/work/a/antoniov/public/data1/MC/FPMC/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2.hepmc",std::ios::in);
-   HepMC::IO_GenEvent ascii_in("/afs/cern.ch/work/a/antoniov/public/data1/MC/ZZTo4L_Tune4C_13TeV-powheg-pythia8_GEN-SIM_00033D48-8FFD-E311-8B7B-0025904C6226.hepmc",std::ios::in);
+   HepMC::IO_GenEvent ascii_in("/afs/cern.ch/work/a/antoniov/public/data1/MC/FPMC/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2.hepmc",std::ios::in);
+   //HepMC::IO_GenEvent ascii_in("/afs/cern.ch/work/a/antoniov/public/data1/MC/ZZTo4L_Tune4C_13TeV-powheg-pythia8_GEN-SIM_00033D48-8FFD-E311-8B7B-0025904C6226.hepmc",std::ios::in);
 
    // declare another IO_GenEvent for writing out the good events
-   //HepMC::IO_GenEvent ascii_out("out.dat",std::ios::out);
+   HepMC::IO_GenEvent ascii_out("out_selected.hepmc",std::ios::out);
 
    // Build HepPDT particle table
    const char infile[] = "/afs/cern.ch/work/a/antoniov/Workspace/HEP-Generators/HepPDT-3.04.01-x86_64-slc6-gcc481/data/particle.tbl";   
@@ -416,6 +416,7 @@ int main() {
    int icount=0;
    int num_events_all=0;
    int num_good_events=0;
+   int num_selected_events=0;
 
    HepMC::GenEvent* evt = ascii_in.read_next_event();
    while ( evt ) {
@@ -784,15 +785,27 @@ int main() {
 
       T->Fill();
 
-      ++num_good_events;
-      //ascii_out << evt;
+      // Select HepMC output events
+      int select_pid_1 = 13;     
+      int select_pid_2 = 13;     
+      if( ( n_Z == 2 ) &&
+          ( abs( Z_first_pid[0] ) == select_pid_1 && abs( Z_second_pid[0] ) == select_pid_1 && Z_first_charge[0]*Z_second_charge[0] < 0. ) &&
+          ( abs( Z_first_pid[1] ) == select_pid_2 && abs( Z_second_pid[1] ) == select_pid_2 && Z_first_charge[1]*Z_second_charge[1] < 0. ) ){
+          // Write output HepMC event
+          std::cout << "Writing selected HepMC event" << std::endl;
+          ascii_out << evt;
+          ++num_selected_events;
+      }
 
+      ++num_good_events;
       delete evt;
       //ascii_in >> evt;
-      evt = ascii_in.read_next_event();   
+      evt = ascii_in.read_next_event();
+
    }
    //........................................PRINT RESULT
    std::cout << num_good_events << " out of " << num_events_all << " processed events passed the cuts. Finished." << std::endl;
+   std::cout << num_selected_events << " selected events." << std::endl;
 
    T->Print();
    // Output file
