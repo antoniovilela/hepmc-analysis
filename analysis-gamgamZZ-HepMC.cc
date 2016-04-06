@@ -29,6 +29,7 @@
 #include <fstream>
 #include <iomanip>
 #include <vector> 
+#include <map> 
 //#include <cstdio>
 
 using namespace std;
@@ -112,23 +113,91 @@ public:
 //Análise principal
 //=========================================
 
-int main() { 
+void print_help(std::vector<std::string> const& required_parameters)
+{
+   std::stringstream oss;
+   oss << "Usage: analysis-gamgamZZ-HepMC.exe ";
+   std::vector<std::string>::const_iterator it_par = required_parameters.begin();
+   std::vector<std::string>::const_iterator pars_end = required_parameters.end();
+   for(; it_par != pars_end; ++it_par){
+      oss << "--" <<  *it_par << " <" << *it_par << "> ";
+   }
+   oss << std::endl;
+   std::cout << oss.str(); 
+}
+
+int main(int argc, char** argv) { 
+
+   vector<string> required_parameters_;
+   required_parameters_.push_back("hepmc");
+   required_parameters_.push_back("out");
+   
+   // Read command line parameters 
+   std::vector<string> command_line_parameters_;
+   if(argc > 1){
+      command_line_parameters_.resize(argc - 1);
+      std::copy(argv + 1, argv + argc, command_line_parameters_.begin());
+   }
+
+   // Help option
+   std::vector<std::string> help_str; help_str.push_back("-h"); help_str.push_back("--help");
+   for(std::vector<std::string>::const_iterator it_help = help_str.begin();
+                                                it_help != help_str.end(); ++it_help){
+      if( std::find(command_line_parameters_.begin(), command_line_parameters_.end(), *it_help) != command_line_parameters_.end() ){
+         print_help(required_parameters_);
+         return 0;
+      }
+   }
+
+   // Read required parameters
+   std::map<std::string,std::string> required_parameters_map_;
+   for(std::vector<std::string>::const_iterator it_par = required_parameters_.begin();
+                                                it_par != required_parameters_.end(); ++it_par){
+      std::stringstream par_ss; par_ss << "--"; par_ss << *it_par;
+      std::vector<std::string>::const_iterator it_par_key = std::find(command_line_parameters_.begin(), command_line_parameters_.end(), par_ss.str());
+
+      if( it_par_key == command_line_parameters_.end() ){
+	 std::stringstream oss;
+	 oss << "ERROR: The following parameter was not set: " << *it_par << std::endl;
+	 throw runtime_error( oss.str() );
+      }
+
+      std::vector<std::string>::const_iterator it_par_value = it_par_key + 1;
+
+      if( it_par_value == command_line_parameters_.end() ||
+          std::find(required_parameters_.begin(), required_parameters_.end(), *it_par_value) != required_parameters_.end() ){
+         std::stringstream oss;
+	 oss << "ERROR: Invalid value for parameter: " << *it_par << std::endl;      
+	 throw runtime_error( oss.str() );
+
+      }
+      required_parameters_map_[*it_par] = *it_par_value;
+   }
 
    bool debug = true;
    int maxEvents = -1;
    double EBeam_ = 6500.;
 
-   std::string const outputFileName = "AAZZ_13TeV-A0Z_5E-6_Lambda_2TeV.root";
+   std::string const filein_ = required_parameters_map_["hepmc"]; 
+
+   //std::string const outputFileName = "AAZZ_13TeV-A0Z_5E-6_Lambda_2TeV.root";
    //std::string const outputFileName = "ZZTo4L_Tune4C_13TeV-powheg-pythia8.root";
+   std::string const outputFileName = required_parameters_map_["out"];
  
    //HepMC::IO_GenEvent ascii_in("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV.hepmc",std::ios::in);
-   HepMC::IO_GenEvent ascii_in("/afs/cern.ch/work/a/antoniov/public/data1/MC/FPMC/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2.hepmc",std::ios::in);
+   //HepMC::IO_GenEvent ascii_in("/afs/cern.ch/work/a/antoniov/public/data1/MC/FPMC/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2/FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV-v2.hepmc",std::ios::in);
    //HepMC::IO_GenEvent ascii_in("/afs/cern.ch/work/a/antoniov/public/data1/MC/ZZTo4L_Tune4C_13TeV-powheg-pythia8_GEN-SIM_00033D48-8FFD-E311-8B7B-0025904C6226.hepmc",std::ios::in);
+   HepMC::IO_GenEvent ascii_in(filein_.c_str(),std::ios::in);
 
    // declare another IO_GenEvent for writing out the good events
-   HepMC::IO_GenEvent ascii_out_4mu("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_4mu.hepmc",std::ios::out);
-   HepMC::IO_GenEvent ascii_out_4e("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_4e.hepmc",std::ios::out);
-   HepMC::IO_GenEvent ascii_out_2mu2e("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_2mu2e.hepmc",std::ios::out);
+   //HepMC::IO_GenEvent ascii_out_4mu("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_4mu.hepmc",std::ios::out);
+   //HepMC::IO_GenEvent ascii_out_4e("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_4e.hepmc",std::ios::out);
+   //HepMC::IO_GenEvent ascii_out_2mu2e("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_2mu2e.hepmc",std::ios::out);
+   size_t filein_aux_pos_1 = filein_.rfind("/");
+   std::string filein_substr = filein_.substr( ( ( filein_aux_pos_1 < filein_.size() ) ? (filein_aux_pos_1 + 1) : 0 ) , (filein_.size() - filein_aux_pos_1) );
+   HepMC::IO_GenEvent ascii_out_4mu( ( filein_substr.substr(0,filein_substr.find(".")) + std::string("_selected_4mu.hepmc") ).c_str(),std::ios::out);
+   HepMC::IO_GenEvent ascii_out_4e( ( filein_substr.substr(0,filein_substr.find(".")) + std::string("_selected_4e.hepmc") ).c_str(),std::ios::out);
+   HepMC::IO_GenEvent ascii_out_2mu2e( ( filein_substr.substr(0,filein_substr.find(".")) + std::string("_selected_2mu2e.hepmc") ).c_str(),std::ios::out);
 
    // Build HepPDT particle table
    const char infile[] = "/afs/cern.ch/work/a/antoniov/Workspace/HEP-Generators/HepPDT-3.04.01-x86_64-slc6-gcc481/data/particle.tbl";   
