@@ -91,13 +91,13 @@ public:
   bool operator()( const HepMC::GenEvent* evt ) { 
     for( HepMC::GenEvent::particle_const_iterator p 
 	   = evt->particles_begin(); p != evt->particles_end(); ++p ){
-      if ( !(*p)->end_vertex() && (*p)->status()==1 && abs( (*p)->pdg_id() ) == 13 && (*p)->momentum().perp() >= 5.0 ){
+      if ( !(*p)->end_vertex() && (*p)->status()==1 && abs( (*p)->pdg_id() ) == 13 && (*p)->momentum().perp() >= 0.0 ){
 	std::cout << "Event " << evt->event_number()
 		  << " is a good event." << std::endl;
 	std::cout << "Selected final state muon: "; (*p)->print();
 	return 1;
       }
-      else if ( !(*p)->end_vertex() && (*p)->status()==1 && abs((*p)->pdg_id()) == 11 && (*p)->momentum().perp() >= 5.0 ){
+      else if ( !(*p)->end_vertex() && (*p)->status()==1 && abs((*p)->pdg_id()) == 11 && (*p)->momentum().perp() >= 0.0 ){
         std::cout << "Event " << evt->event_number()
 		  << " is a good event." << std::endl;
 	std::cout << "Selected final state electron: "; (*p)->print();
@@ -126,7 +126,9 @@ int main() {
    //HepMC::IO_GenEvent ascii_in("/afs/cern.ch/work/a/antoniov/public/data1/MC/ZZTo4L_Tune4C_13TeV-powheg-pythia8_GEN-SIM_00033D48-8FFD-E311-8B7B-0025904C6226.hepmc",std::ios::in);
 
    // declare another IO_GenEvent for writing out the good events
-   HepMC::IO_GenEvent ascii_out("out_selected.hepmc",std::ios::out);
+   HepMC::IO_GenEvent ascii_out_4mu("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_4mu.hepmc",std::ios::out);
+   HepMC::IO_GenEvent ascii_out_4e("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_4e.hepmc",std::ios::out);
+   HepMC::IO_GenEvent ascii_out_2mu2e("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_2mu2e.hepmc",std::ios::out);
 
    // Build HepPDT particle table
    const char infile[] = "/afs/cern.ch/work/a/antoniov/Workspace/HEP-Generators/HepPDT-3.04.01-x86_64-slc6-gcc481/data/particle.tbl";   
@@ -416,7 +418,9 @@ int main() {
    int icount=0;
    int num_events_all=0;
    int num_good_events=0;
-   int num_selected_events=0;
+   int num_selected_4mu_events=0;
+   int num_selected_4e_events=0;
+   int num_selected_2mu2e_events=0;
 
    HepMC::GenEvent* evt = ascii_in.read_next_event();
    while ( evt ) {
@@ -786,15 +790,47 @@ int main() {
       T->Fill();
 
       // Select HepMC output events
-      int select_pid_1 = 13;     
-      int select_pid_2 = 13;     
-      if( ( n_Z == 2 ) &&
-          ( abs( Z_first_pid[0] ) == select_pid_1 && abs( Z_second_pid[0] ) == select_pid_1 && Z_first_charge[0]*Z_second_charge[0] < 0. ) &&
-          ( abs( Z_first_pid[1] ) == select_pid_2 && abs( Z_second_pid[1] ) == select_pid_2 && Z_first_charge[1]*Z_second_charge[1] < 0. ) ){
-          // Write output HepMC event
-          std::cout << "Writing selected HepMC event" << std::endl;
-          ascii_out << evt;
-          ++num_selected_events;
+      if( n_Z == 2 ) {
+         // 4mu
+         int select_pid_1 = 13;     
+         int select_pid_2 = 13;     
+         if( ( abs( Z_first_pid[0] ) == select_pid_1 && abs( Z_second_pid[0] ) == select_pid_1 && Z_first_charge[0]*Z_second_charge[0] < 0. ) &&
+             ( abs( Z_first_pid[1] ) == select_pid_2 && abs( Z_second_pid[1] ) == select_pid_2 && Z_first_charge[1]*Z_second_charge[1] < 0. ) ){
+           // Write output HepMC event
+           std::cout << "Writing selected HepMC event (ZZ > 4mu)" << std::endl;
+           //ascii_out << evt;
+           ascii_out_4mu << evt; 
+           ++num_selected_4mu_events;
+         }
+         // 4e
+         select_pid_1 = 11;     
+         select_pid_2 = 11;     
+         if( ( abs( Z_first_pid[0] ) == select_pid_1 && abs( Z_second_pid[0] ) == select_pid_1 && Z_first_charge[0]*Z_second_charge[0] < 0. ) &&
+             ( abs( Z_first_pid[1] ) == select_pid_2 && abs( Z_second_pid[1] ) == select_pid_2 && Z_first_charge[1]*Z_second_charge[1] < 0. ) ){
+           // Write output HepMC event
+           std::cout << "Writing selected HepMC event (ZZ > 4e)" << std::endl;
+           //ascii_out << evt;
+           ascii_out_4e << evt; 
+           ++num_selected_4e_events;
+         }
+         // 2mu2e
+         select_pid_1 = 13;     
+         select_pid_2 = 11;     
+         if( ( abs( Z_first_pid[0] ) == select_pid_1 && abs( Z_second_pid[0] ) == select_pid_1 && Z_first_charge[0]*Z_second_charge[0] < 0. ) &&
+             ( abs( Z_first_pid[1] ) == select_pid_2 && abs( Z_second_pid[1] ) == select_pid_2 && Z_first_charge[1]*Z_second_charge[1] < 0. ) ){
+           // Write output HepMC event
+           std::cout << "Writing selected HepMC event (ZZ > 2mu2e)" << std::endl;
+           //ascii_out << evt;
+           ascii_out_2mu2e << evt; 
+           ++num_selected_2mu2e_events;
+         } else if( ( abs( Z_first_pid[0] ) == select_pid_2 && abs( Z_second_pid[0] ) == select_pid_2 && Z_first_charge[0]*Z_second_charge[0] < 0. ) &&
+                    ( abs( Z_first_pid[1] ) == select_pid_1 && abs( Z_second_pid[1] ) == select_pid_1 && Z_first_charge[1]*Z_second_charge[1] < 0. ) ){
+           // Write output HepMC event
+           std::cout << "Writing selected HepMC event (ZZ > 2e2mu)" << std::endl;
+           //ascii_out << evt;
+           ascii_out_2mu2e << evt; 
+           ++num_selected_2mu2e_events;
+         }
       }
 
       ++num_good_events;
@@ -805,7 +841,9 @@ int main() {
    }
    //........................................PRINT RESULT
    std::cout << num_good_events << " out of " << num_events_all << " processed events passed the cuts. Finished." << std::endl;
-   std::cout << num_selected_events << " selected events." << std::endl;
+   std::cout << num_selected_4mu_events << " selected 4mu events." << std::endl;
+   std::cout << num_selected_4e_events << " selected 4e events." << std::endl;
+   std::cout << num_selected_2mu2e_events << " selected 2mu2e events." << std::endl;
 
    T->Print();
    // Output file
