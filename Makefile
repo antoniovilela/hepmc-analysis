@@ -25,7 +25,7 @@
 #  Herwig_LIB	= -L$(GENSERdir)/lib -Wl,-rpath -Wl,$(GENSERdir)/lib \
                   -lherwig6_510 -lherwig6_510_dumm -lherwig6_510_pdfdumm
 #  ROOTLIBS = $(shell root-config --libs) -lMinuit -lEG
-  ROOTLIBS    = $(shell root-config --libs)
+  ROOTLIBS    = $(shell root-config --libs) -lGenVector
   FASTJETLIBS = $(shell /afs/cern.ch/work/a/antoniov/Workspace/HEP-Generators/fastjet-3.1.3-x86_64-slc6-gcc481/bin/fastjet-config --libs --plugins)
 ################################################################################ Compiler options
 #
@@ -120,7 +120,7 @@ endif
 #
 .SUFFIXES:      .o .cxx .f .exe
 #all:	$(EXAMPLES)
-all:	analysis-SD-Dijets-HepMC.exe analysis-gamgamZZ-HepMC.exe
+all:	analysis-SD-Dijets-HepMC.exe analysis-gamgamZZ-HepMC.exe analysis-Dijets-HepMC.exe
 
 example-HepMC-ROOT.exe: example-HepMC-ROOT.o
 	@echo "Building $@ ..."
@@ -141,6 +141,15 @@ analysis-SD-Dijets-HepMC.exe: analysis-SD-Dijets-HepMC.o
 analysis-gamgamZZ-HepMC.exe: analysis-gamgamZZ-HepMC.o
 	@echo "Building $@ ..."
 	$(CXX) $(FLAGS) analysis-gamgamZZ-HepMC.o \
+		$(HepMClib) \
+		$(HepPDTlib) \
+                $(ROOTLIBS) \
+                $(FASTJETLIBS) \
+	        $(LINK_LIBS) -o $@
+
+analysis-Dijets-HepMC.exe: analysis-Dijets-HepMC.o
+	@echo "Building $@ ..."
+	$(CXX) $(FLAGS) analysis-Dijets-HepMC.o \
 		$(HepMClib) \
 		$(HepPDTlib) \
                 $(ROOTLIBS) \
