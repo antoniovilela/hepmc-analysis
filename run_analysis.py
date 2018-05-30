@@ -12,6 +12,10 @@ def run_analysis( fileName ):
 
     mychain.Print()
 
+    n_events_all = 0
+    n_events_selected_jet = 0
+    n_events_selected_proton = 0
+   
     for jentry in xrange(entries):
 	# get the next tree in the chain and verify
 	ientry = mychain.LoadTree(jentry)
@@ -23,8 +27,8 @@ def run_analysis( fileName ):
 	if nb<=0:
 	    continue
 
-	# use the values directly from the tree
-
+        n_events_all += 1
+ 
         select_jet = False
 	n_jet = int(mychain.n_jet)
         jet1_pt = -1.
@@ -52,6 +56,8 @@ def run_analysis( fileName ):
         if not select_jet:
             continue
 
+        n_events_selected_jet += 1
+
 	select_proton = False
 
 	n_proton = int(mychain.n_proton)
@@ -65,16 +71,24 @@ def run_analysis( fileName ):
         if not select_proton:
             continue
 
+        n_events_selected_proton += 1
+
 	twojet_vec = jet1_vec + jet2_vec;    
 
-	print "Event %d" % jentry
+	print "Event %d" % (jentry + 1)
 	print "Number of jets: %d, Jet pT = %f, %f, Two-jet mass: %f" % (n_jet,jet1_pt,jet2_pt,twojet_vec.M())
 	print "Mass (protons) = %f" % mass_from_protons
 
+    # Summary
+    print "\nSummary:"
+    print "Number of events: %d" % n_events_all
+    print "Number of events (Jet selection): %d" % n_events_selected_jet
+    print "Number of events (Proton selection): %d" % n_events_selected_proton
+
 if __name__ == '__main__':
 
-    fileName = 'analysis-Dijets_DPEDijets_13TeV_PTMIN_100-v1.root'
+    fileName = 'analysis-Dijets_DPEDijets_13TeV_PTMIN_50-v1.root'
     run_analysis( fileName )
 
-    print "Finished."
+    print "\nFinished."
 

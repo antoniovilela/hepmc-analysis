@@ -3,6 +3,7 @@
 
 #include "TH1D.h"
 #include "TH2D.h"
+#include "TMath.h"
 #include "Math/LorentzVector.h"
 
 namespace math {
@@ -108,17 +109,20 @@ int main() {
    // Configuration 
    // Output file name
    //std::string outputFilename( "analysis-SD-Dijets.root" );
-   std::string outputFilename( "analysis-SD-Dijets_8TeV_tmp.root" );
+   //std::string outputFilename( "analysis-SD-Dijets_8TeV_tmp.root" );
+   std::string outputFilename( "analysis-SD-Dijets_FPMC_8TeV_PTMIN_40.root" );
    //std::string outputFilename( "analysis-SD-Dijets-FPMC_SDDijets_13TeV_PTMIN_30.root" );
    // Input HepMC file
    HepMC::IO_GenEvent ascii_in(
       //"/tmp/antoniov/FPMC_SDDijets_SD1_13TeV_PTMIN_20-v1_1.hepmc",
-      "/tmp/antoniov/FPMC_SDDijets_SD1_8TeV_PTMIN_20-v1_1.hepmc",
-       std::ios::in
+      //"/tmp/antoniov/FPMC_SDDijets_SD1_8TeV_PTMIN_20-v1_1.hepmc",
+      "/afs/cern.ch/work/a/antoniov/Workspace/HEP-Generators/FPMC/fpmc-git-main/FPMC_SDDijets_SD1_8TeV_PTMIN_40.hepmc",
+      std::ios::in
    );
  
    //int maxEvents = -1;  
-   int maxEvents = 50000;
+   //int maxEvents = 50000;
+   int maxEvents = 50;
   
    bool debug = true;
 
@@ -307,12 +311,27 @@ int main() {
                                                          << beam2_pz << ", " << beam2_e << std::endl;
       }
       //---
-      double x1 = parton1->momentum().pz()/beam1_pz;
-      double x2 = parton2->momentum().pz()/beam2_pz;
+      //double x1 = parton1->momentum().pz()/beam1_pz;
+      //double x2 = parton2->momentum().pz()/beam2_pz;
+      double x1 = parton1->momentum().e()/beam1_e;
+      double x2 = parton2->momentum().e()/beam2_e;
+      math::XYZTLorentzVector vec_outParton1( outParton1->momentum().px(),
+                                              outParton1->momentum().py(),
+                                              outParton1->momentum().pz(),
+                                              outParton1->momentum().e() );
+      math::XYZTLorentzVector vec_outParton2( outParton2->momentum().px(),
+                                              outParton2->momentum().py(),
+                                              outParton2->momentum().pz(),
+                                              outParton2->momentum().e() );
+      double x1_partons = (1./(2*beam1_e))*( vec_outParton1.pt()*TMath::Exp( vec_outParton1.Rapidity() ) + 
+                                           vec_outParton2.pt()*TMath::Exp( vec_outParton2.Rapidity() ) );
+      double x2_partons = (1./(2*beam1_e))*( vec_outParton1.pt()*TMath::Exp( -vec_outParton1.Rapidity() ) + 
+                                           vec_outParton2.pt()*TMath::Exp( -vec_outParton2.Rapidity() ) );
 
       if(pdf_info) std::cout << "x1, x2, PDF scale, event scale= " << pdf_info->x1() << ", " << pdf_info->x2() 
 	                     << ", " << pdf_info->scalePDF() << ", " << evt->event_scale() << std::endl;
-      std::cout << "hard partonic x1, x2, scale, pT= " << x1 << ", " << x2 << ", " << scale << ", " << outParton1->momentum().perp() << std::endl;
+      std::cout << "hard partonic x1, x2, x1(partons), x1(partons)= " << x1 << ", " << x2 << ", " << x1_partons << ", " << x2_partons << std::endl
+                << "                                     scale, pT= " << scale << ", " << outParton1->momentum().perp() << std::endl;
 
       if( select_parton_pt && ( outParton1->momentum().perp() < min_pt || outParton2->momentum().perp() < min_pt ) ) continue;
 

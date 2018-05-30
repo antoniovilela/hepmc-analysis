@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
       required_parameters_map_[*it_par] = *it_par_value;
    }
 
-   bool debug = true;
+   bool debug = false;
    int maxEvents = -1;
    double EBeam_ = 6500.;
 

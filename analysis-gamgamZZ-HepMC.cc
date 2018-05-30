@@ -60,8 +60,8 @@ class IsW_Boson {
 public:
   /// returns true if the GenParticle is a W
   bool operator()( const HepMC::GenParticle* p ) { 
-    if ( p->pdg_id() == 24 || p->pdg_id() == -24 ) return 1;
-    return 0;
+    if ( p->pdg_id() == 24 || p->pdg_id() == -24 ) return true;
+    return false;
   }
 };
 
@@ -69,8 +69,8 @@ class IsZ_Boson {
 public:
   /// returns true if the GenParticle is a Z
   bool operator()( const HepMC::GenParticle* p ) { 
-    if ( abs( p->pdg_id() ) == 23 ) return 1;
-    return 0;
+    if ( abs( p->pdg_id() ) == 23 ) return true;
+    return false;
   }
 };
 
@@ -78,8 +78,8 @@ class IsStateFinal {
 public:
   /// returns true if the GenParticle does not decay
   bool operator()( const HepMC::GenParticle* p ) { 
-    if ( !p->end_vertex() && p->status()==1 ) return 1;
-    return 0;
+    if ( !p->end_vertex() && p->status()==1 ) return true;
+    return false;
   }
 };
 
@@ -88,7 +88,7 @@ public:
 //===================================
 class IsEventGood {
 public:
-  /// check this event for goodness
+
   bool operator()( const HepMC::GenEvent* evt ) { 
     for( HepMC::GenEvent::particle_const_iterator p 
 	   = evt->particles_begin(); p != evt->particles_end(); ++p ){
@@ -96,21 +96,23 @@ public:
 	std::cout << "Event " << evt->event_number()
 		  << " is a good event." << std::endl;
 	std::cout << "Selected final state muon: "; (*p)->print();
-	return 1;
+
+	return true;
       }
       else if ( !(*p)->end_vertex() && (*p)->status()==1 && abs((*p)->pdg_id()) == 11 && (*p)->momentum().perp() >= 0.0 ){
         std::cout << "Event " << evt->event_number()
 		  << " is a good event." << std::endl;
 	std::cout << "Selected final state electron: "; (*p)->print();
-        return 1;
+
+        return true;
       }
     }
-    return 0;
+    return false;
   }
 };
 
 //========================================
-//Análise principal
+// Análise principal
 //=========================================
 
 void print_help(std::vector<std::string> const& required_parameters)
@@ -193,11 +195,12 @@ int main(int argc, char** argv) {
    //HepMC::IO_GenEvent ascii_out_4mu("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_4mu.hepmc",std::ios::out);
    //HepMC::IO_GenEvent ascii_out_4e("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_4e.hepmc",std::ios::out);
    //HepMC::IO_GenEvent ascii_out_2mu2e("FPMC_gamgamZZ_anom_A0Z_5E-6_Lambda_2TeV_13TeV_selected_2mu2e.hepmc",std::ios::out);
-   size_t filein_aux_pos_1 = filein_.rfind("/");
+   
+   /*size_t filein_aux_pos_1 = filein_.rfind("/");
    std::string filein_substr = filein_.substr( ( ( filein_aux_pos_1 < filein_.size() ) ? (filein_aux_pos_1 + 1) : 0 ) , (filein_.size() - filein_aux_pos_1) );
    HepMC::IO_GenEvent ascii_out_4mu( ( filein_substr.substr(0,filein_substr.find(".")) + std::string("_selected_4mu.hepmc") ).c_str(),std::ios::out);
    HepMC::IO_GenEvent ascii_out_4e( ( filein_substr.substr(0,filein_substr.find(".")) + std::string("_selected_4e.hepmc") ).c_str(),std::ios::out);
-   HepMC::IO_GenEvent ascii_out_2mu2e( ( filein_substr.substr(0,filein_substr.find(".")) + std::string("_selected_2mu2e.hepmc") ).c_str(),std::ios::out);
+   HepMC::IO_GenEvent ascii_out_2mu2e( ( filein_substr.substr(0,filein_substr.find(".")) + std::string("_selected_2mu2e.hepmc") ).c_str(),std::ios::out);*/
 
    // Build HepPDT particle table
    const char infile[] = "/afs/cern.ch/work/a/antoniov/Workspace/HEP-Generators/HepPDT-3.04.01-x86_64-slc6-gcc481/data/particle.tbl";   
@@ -234,11 +237,14 @@ int main(int argc, char** argv) {
    //================================================================
    //FastJet
    //==================================================================
-   double Rparam = 0.5;
+   //double Rparam = 0.5;
    fastjet::Strategy strategy = fastjet::Best;
    fastjet::RecombinationScheme recombScheme = fastjet::E_scheme;
-   fastjet::JetDefinition *jetDef = NULL;
-   jetDef = new fastjet::JetDefinition(fastjet::antikt_algorithm, Rparam, recombScheme, strategy);
+   //fastjet::JetDefinition *jetDef = NULL;
+   fastjet::JetDefinition *jetDefAK5 = NULL;
+   jetDefAK5 = new fastjet::JetDefinition(fastjet::antikt_algorithm, 0.5, recombScheme, strategy);
+   fastjet::JetDefinition *jetDefAK8 = NULL;
+   jetDefAK8 = new fastjet::JetDefinition(fastjet::antikt_algorithm, 0.8, recombScheme, strategy);
    std::vector<fastjet::PseudoJet> fjInputs;
    //==================================================================
 
@@ -293,7 +299,7 @@ int main(int argc, char** argv) {
    double chg_energy[NCHGMAX];
    double chg_mass[NCHGMAX];
 
-   int const PROTONMAX = 100;
+   int const PROTONMAX = 50;
    int n_proton =0;
    double proton_pt[PROTONMAX];
    double proton_px[PROTONMAX];
@@ -305,13 +311,20 @@ int main(int argc, char** argv) {
    double proton_weight[PROTONMAX];
    int    proton_acc[PROTONMAX];
 
-   int const JETMAX = 500;
-   int n_jet =0;
-   double jet_px[JETMAX];
-   double jet_py[JETMAX];
-   double jet_pz[JETMAX];
-   double jet_pt[JETMAX];
-   double jet_energy[JETMAX];
+   int const JETMAX = 100;
+   int n_jetAK5 =0;
+   double jetAK5_px[JETMAX];
+   double jetAK5_py[JETMAX];
+   double jetAK5_pz[JETMAX];
+   double jetAK5_pt[JETMAX];
+   double jetAK5_energy[JETMAX];
+
+   int n_jetAK8 =0;
+   double jetAK8_px[JETMAX];
+   double jetAK8_py[JETMAX];
+   double jetAK8_pz[JETMAX];
+   double jetAK8_pt[JETMAX];
+   double jetAK8_energy[JETMAX];
 
    int const NZMAX = 10;
    int n_Z = 0;
@@ -391,13 +404,20 @@ int main(int argc, char** argv) {
    T->Branch("proton_weight", &proton_weight,"proton_weight[n_proton]/D");
    T->Branch("proton_acc", &proton_acc,"proton_acc[n_proton]/I");
 
-   //Jet
-   T->Branch("n_jet", &n_jet,"n_jet/I");
-   T->Branch("jet_px", &jet_px,"jet_px[n_jet]/D");
-   T->Branch("jet_py", &jet_py,"jet_py[n_jet]/D");
-   T->Branch("jet_pz", &jet_pz,"jet_pz[n_jet]/D");
-   T->Branch("jet_pt", &jet_pt,"jet_pt[n_jet]/D");
-   T->Branch("jet_energy", &jet_energy,"jet_energy[n_jet]/D");
+   // Jets
+   T->Branch("n_jetAK5", &n_jetAK5,"n_jetAK5/I");
+   T->Branch("jetAK5_px", &jetAK5_px,"jetAK5_px[n_jetAK5]/D");
+   T->Branch("jetAK5_py", &jetAK5_py,"jetAK5_py[n_jetAK5]/D");
+   T->Branch("jetAK5_pz", &jetAK5_pz,"jetAK5_pz[n_jetAK5]/D");
+   T->Branch("jetAK5_pt", &jetAK5_pt,"jetAK5_pt[n_jetAK5]/D");
+   T->Branch("jetAK5_energy", &jetAK5_energy,"jetAK5_energy[n_jetAK5]/D");
+
+   T->Branch("n_jetAK8", &n_jetAK8,"n_jetAK8/I");
+   T->Branch("jetAK8_px", &jetAK8_px,"jetAK8_px[n_jetAK8]/D");
+   T->Branch("jetAK8_py", &jetAK8_py,"jetAK8_py[n_jetAK8]/D");
+   T->Branch("jetAK8_pz", &jetAK8_pz,"jetAK8_pz[n_jetAK8]/D");
+   T->Branch("jetAK8_pt", &jetAK8_pt,"jetAK8_pt[n_jetAK8]/D");
+   T->Branch("jetAK8_energy", &jetAK8_energy,"jetAK8_energy[n_jetAK8]/D");
 
    T->Branch("n_Z", &n_Z,"n_Z/I");
    T->Branch("Z_pt", &Z_pt,"Z_pt[n_Z]/D");
@@ -476,7 +496,8 @@ int main(int argc, char** argv) {
    TH1F* h_proton_weight = new TH1F("proton_weight","proton_weight",100,0.,1.);
    TH1F* h_proton_acc = new TH1F("proton_acc","proton_acc",2,0,2);
 
-   //Jets
+   // Jets
+   TH1F* h_njet = new TH1F("njet","njet",50,0.,50.);
    TH1F* h_jetpt = new TH1F("jetpt","jetpt",400,0.,400.);
 
    // EVENT LOOP
@@ -553,13 +574,20 @@ int main(int argc, char** argv) {
 	 proton_weight[iproton] = -999.;
 	 proton_acc[iproton] = -1; }
 
-      n_jet=0;
+      n_jetAK5=0;
       for(int ijet = 0; ijet < JETMAX; ++ijet) {
-	 jet_px[ijet] = -999.;
-	 jet_py[ijet] = -999.;
-	 jet_pz[ijet] = -999.;
-	 jet_pt[ijet] = -999.;
-	 jet_energy[ijet] = -999.; }
+	 jetAK5_px[ijet] = -999.;
+	 jetAK5_py[ijet] = -999.;
+	 jetAK5_pz[ijet] = -999.;
+	 jetAK5_pt[ijet] = -999.;
+	 jetAK5_energy[ijet] = -999.; }
+      n_jetAK8=0;
+      for(int ijet = 0; ijet < JETMAX; ++ijet) {
+	 jetAK8_px[ijet] = -999.;
+	 jetAK8_py[ijet] = -999.;
+	 jetAK8_pz[ijet] = -999.;
+	 jetAK8_pt[ijet] = -999.;
+	 jetAK8_energy[ijet] = -999.; }
       fjInputs.clear();
 
       n_Z = 0;
@@ -739,6 +767,22 @@ int main(int argc, char** argv) {
 	    }
 	 }
 
+         // Jet particles
+	 if ( isfinal(*p) ){
+	    int pdg_id = (*p)->pdg_id();
+
+            if( pdg_id != 12 &&
+                pdg_id != 14 &&
+                pdg_id != 16 &&
+                fabs( (*p)->momentum().eta() ) <= 5.0 ){
+               fjInputs.push_back( 
+                  fastjet::PseudoJet( (*p)->momentum().px(),
+                                      (*p)->momentum().py(),
+                                      (*p)->momentum().pz(),
+                                      (*p)->momentum().e() ) );
+            }
+         }   
+
          // ZZ information
 	 if ( isZ(*p) ){
 
@@ -764,19 +808,23 @@ int main(int argc, char** argv) {
             }
 
             // Find decaying Z
-	    if ( (*p)->end_vertex() && (*p)->production_vertex() ) {
-               bool findParentZ = false; 
-	       for ( HepMC::GenVertex::particle_iterator parent = (*p)->production_vertex()->particles_begin(HepMC::parents);
-                                                         parent != (*p)->production_vertex()->particles_end(HepMC::parents); ++parent ) {
-                  if( isZ(*parent) ) { findParentZ = true; break; }
-	       }
+	    //if ( (*p)->end_vertex() && (*p)->production_vertex() ) {
+	    if ( isZ(*p) && (*p)->end_vertex() ) {
+
                bool findChildZ = false; 
 	       for ( HepMC::GenVertex::particle_iterator child = (*p)->end_vertex()->particles_begin(HepMC::children);
                                                          child != (*p)->end_vertex()->particles_end(HepMC::children); ++child ) {
                   if( isZ(*child) ) { findChildZ = true; break; }
 	       }
 
-               bool findLastZInChain = findParentZ && !findChildZ;
+               /*bool findParentZ = false; 
+	       for ( HepMC::GenVertex::particle_iterator parent = (*p)->production_vertex()->particles_begin(HepMC::parents);
+                                                         parent != (*p)->production_vertex()->particles_end(HepMC::parents); ++parent ) {
+                  if( isZ(*parent) ) { findParentZ = true; break; }
+	       }*/
+
+               //bool findLastZInChain = findParentZ && !findChildZ;
+               bool findLastZInChain = !findChildZ;
 	       if( findLastZInChain ){
 		  HepMC::GenVertex::particle_iterator it_part = (*p)->end_vertex()->particles_begin(HepMC::children);
 		  HepMC::GenParticle* decay_part_1 = *it_part;
@@ -784,8 +832,14 @@ int main(int argc, char** argv) {
 		  HepMC::GenParticle* decay_part_2 = *it_part;
 
 		  std::cout << "Selected Z: "; (*p)->print();
-		  std::cout << "           --> "; decay_part_1->print();       
-		  std::cout << "           --> "; decay_part_2->print();       
+		  std::cout << "           --> "; decay_part_1->print();
+		  std::cout << "           --> "; decay_part_2->print();
+
+                  // Print parent
+	          for ( HepMC::GenVertex::particle_iterator parent = (*p)->production_vertex()->particles_begin(HepMC::parents);
+                                                            parent != (*p)->production_vertex()->particles_end(HepMC::parents); ++parent ) {
+                     std::cout << "       Parent: "; (*parent)->print();
+                  }
 
 		  Z_pt[n_Z] = (*p)->momentum().perp();
 		  Z_px[n_Z] = (*p)->momentum().px();
@@ -834,27 +888,46 @@ int main(int argc, char** argv) {
       }
 
       //=================================================
-      double ptmin = 5.0;
-      vector <fastjet::PseudoJet> inclusiveJets;
-      vector <fastjet::PseudoJet> sortedJets;
-      fastjet::ClusterSequence clustSeq(fjInputs, *jetDef);
-      inclusiveJets = clustSeq.inclusive_jets(ptmin);
-      sortedJets  = sorted_by_pt(inclusiveJets);
-      for(unsigned int i = 0; i < sortedJets.size(); i++) {
-	 jet_px[i] = sortedJets[i].px();
-	 jet_py[i] = sortedJets[i].py();
-	 jet_pz[i] = sortedJets[i].pz();
-	 jet_pt[i] = sortedJets[i].pt();
-	 jet_energy[i] = sortedJets[i].e();
-	 h_jetpt->Fill(jet_pt[i]);
+      double ptminAK5 = 5.0;
+      vector <fastjet::PseudoJet> inclusiveJetsAK5;
+      vector <fastjet::PseudoJet> sortedJetsAK5;
+      fastjet::ClusterSequence clustSeqAK5( fjInputs, *jetDefAK5 );
+      inclusiveJetsAK5 = clustSeqAK5.inclusive_jets( ptminAK5 );
+      sortedJetsAK5    = sorted_by_pt( inclusiveJetsAK5 );
+      for(unsigned int i = 0; i < sortedJetsAK5.size(); i++) {
+	 jetAK5_px[i] = sortedJetsAK5[i].px();
+	 jetAK5_py[i] = sortedJetsAK5[i].py();
+	 jetAK5_pz[i] = sortedJetsAK5[i].pz();
+	 jetAK5_pt[i] = sortedJetsAK5[i].pt();
+	 jetAK5_energy[i] = sortedJetsAK5[i].e();
+
+	 h_jetpt->Fill( jetAK5_pt[i] );
+         ++n_jetAK5;
       }
-      ++n_jet;
+
+      double ptminAK8 = 5.0;
+      vector <fastjet::PseudoJet> inclusiveJetsAK8;
+      vector <fastjet::PseudoJet> sortedJetsAK8;
+      fastjet::ClusterSequence clustSeqAK8( fjInputs, *jetDefAK8 );
+      inclusiveJetsAK8 = clustSeqAK8.inclusive_jets( ptminAK8 );
+      sortedJetsAK8    = sorted_by_pt( inclusiveJetsAK8 );
+      for(unsigned int i = 0; i < sortedJetsAK8.size(); i++) {
+	 jetAK8_px[i] = sortedJetsAK8[i].px();
+	 jetAK8_py[i] = sortedJetsAK8[i].py();
+	 jetAK8_pz[i] = sortedJetsAK8[i].pz();
+	 jetAK8_pt[i] = sortedJetsAK8[i].pt();
+	 jetAK8_energy[i] = sortedJetsAK8[i].e();
+
+	 h_jetpt->Fill( jetAK8_pt[i] );
+         ++n_jetAK8;
+      }
       //==================================================	  
 
       h_nmu->Fill(n_mu);
       h_ne->Fill(n_e);
       h_nproton->Fill(n_proton);
       h_nchg->Fill( n_chg );
+      h_njet->Fill( n_jetAK5 );
 
       T->Fill();
 
@@ -866,9 +939,8 @@ int main(int argc, char** argv) {
          if( ( abs( Z_first_pid[0] ) == select_pid_1 && abs( Z_second_pid[0] ) == select_pid_1 && Z_first_charge[0]*Z_second_charge[0] < 0. ) &&
              ( abs( Z_first_pid[1] ) == select_pid_2 && abs( Z_second_pid[1] ) == select_pid_2 && Z_first_charge[1]*Z_second_charge[1] < 0. ) ){
            // Write output HepMC event
-           std::cout << "Writing selected HepMC event (ZZ > 4mu)" << std::endl;
-           //ascii_out << evt;
-           ascii_out_4mu << evt; 
+           //std::cout << "Writing selected HepMC event (ZZ > 4mu)" << std::endl;
+           //ascii_out_4mu << evt; 
            ++num_selected_4mu_events;
          }
          // 4e
@@ -877,9 +949,8 @@ int main(int argc, char** argv) {
          if( ( abs( Z_first_pid[0] ) == select_pid_1 && abs( Z_second_pid[0] ) == select_pid_1 && Z_first_charge[0]*Z_second_charge[0] < 0. ) &&
              ( abs( Z_first_pid[1] ) == select_pid_2 && abs( Z_second_pid[1] ) == select_pid_2 && Z_first_charge[1]*Z_second_charge[1] < 0. ) ){
            // Write output HepMC event
-           std::cout << "Writing selected HepMC event (ZZ > 4e)" << std::endl;
-           //ascii_out << evt;
-           ascii_out_4e << evt; 
+           //std::cout << "Writing selected HepMC event (ZZ > 4e)" << std::endl;
+           //ascii_out_4e << evt; 
            ++num_selected_4e_events;
          }
          // 2mu2e
@@ -888,16 +959,14 @@ int main(int argc, char** argv) {
          if( ( abs( Z_first_pid[0] ) == select_pid_1 && abs( Z_second_pid[0] ) == select_pid_1 && Z_first_charge[0]*Z_second_charge[0] < 0. ) &&
              ( abs( Z_first_pid[1] ) == select_pid_2 && abs( Z_second_pid[1] ) == select_pid_2 && Z_first_charge[1]*Z_second_charge[1] < 0. ) ){
            // Write output HepMC event
-           std::cout << "Writing selected HepMC event (ZZ > 2mu2e)" << std::endl;
-           //ascii_out << evt;
-           ascii_out_2mu2e << evt; 
+           //std::cout << "Writing selected HepMC event (ZZ > 2mu2e)" << std::endl;
+           //ascii_out_2mu2e << evt; 
            ++num_selected_2mu2e_events;
          } else if( ( abs( Z_first_pid[0] ) == select_pid_2 && abs( Z_second_pid[0] ) == select_pid_2 && Z_first_charge[0]*Z_second_charge[0] < 0. ) &&
                     ( abs( Z_first_pid[1] ) == select_pid_1 && abs( Z_second_pid[1] ) == select_pid_1 && Z_first_charge[1]*Z_second_charge[1] < 0. ) ){
            // Write output HepMC event
-           std::cout << "Writing selected HepMC event (ZZ > 2e2mu)" << std::endl;
-           //ascii_out << evt;
-           ascii_out_2mu2e << evt; 
+           //std::cout << "Writing selected HepMC event (ZZ > 2e2mu)" << std::endl;
+           //ascii_out_2mu2e << evt; 
            ++num_selected_2mu2e_events;
          }
       }
@@ -965,9 +1034,12 @@ int main(int argc, char** argv) {
    h_proton_weight->Write();
    h_proton_acc->Write();
 
+   h_njet->Write();
    h_jetpt->Write();
 
    output->Close();
+   delete jetDefAK5;
+   delete jetDefAK8;
 
    return 0;
 } //end of int main
